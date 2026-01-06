@@ -1,0 +1,18 @@
+{
+  "manifest_version": 1,
+  "name": "今日老婆",
+  "version": "1.0.0",
+  "description": "今天你的群老婆是谁呢",
+  "author": {
+    "name": "梦清",
+    "url": "https://github.com/AkariRin"
+  },
+  "license": "MIT",
+  "host_application": {
+    "min_version": "0.12.1"
+  },
+  "homepage_url": "https://github.com/AkariRin/jrlp_plugin",
+  "repository_url": "https://github.com/AkariRin/jrlp_plugin",
+  "keywords": ["今日老婆", "群老婆", "抽老婆"],
+  "categories": ["Entertainment & Interaction"]
+}
