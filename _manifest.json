@@ -11,8 +11,8 @@
   "host_application": {
     "min_version": "0.12.1"
   },
-  "homepage_url": "https://github.com/AkariRin/jrlp_plugin",
-  "repository_url": "https://github.com/AkariRin/jrlp_plugin",
+  "homepage_url": "https://github.com/AkariRin/jrlp-plugin",
+  "repository_url": "https://github.com/AkariRin/jrlp-plugin",
   "keywords": ["今日老婆", "群老婆", "抽老婆"],
   "categories": ["Entertainment & Interaction"]
 }

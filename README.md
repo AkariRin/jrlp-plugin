@@ -1,4 +1,4 @@
-# 今日老婆插件 (JRLP Plugin)
+# 今日老婆
 
 🎲每天在群里随机抽取一位群友作为你的"群老婆"，每日限抽一次，结果当天有效。
 
@@ -12,7 +12,7 @@
 
 ```toml
 [plugin]
-name = "jrlp_plugin"      # 插件名称
+name = "jrlp-plugin"      # 插件名称
 version = "1.0.0"         # 插件版本
 enabled = true            # 是否启用插件
 config_version = "1.0.0"  # 配置版本

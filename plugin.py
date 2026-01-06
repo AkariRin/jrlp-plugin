@@ -20,7 +20,7 @@ from src.plugin_system import (
     get_logger
 )
 
-logger = get_logger("jrlp_plugin")
+logger = get_logger("jrlp-plugin")
 
 class JrlpDatabase:
     """今日老婆数据库管理类"""
@@ -349,14 +349,14 @@ class JrlpCommand(BaseCommand):
 
 @register_plugin
 class JrlpPlugin(BasePlugin):
-    plugin_name = "jrlp_plugin"
+    plugin_name = "jrlp-plugin"
     enable_plugin = True
     dependencies = []
     python_dependencies = []
     config_file_name = "config.toml"
     config_schema = {
         "plugin": {
-            "name": ConfigField(type=str, default="jrlp_plugin", description="插件名称"),
+            "name": ConfigField(type=str, default="jrlp-plugin", description="插件名称"),
             "version": ConfigField(type=str, default="1.0.0", description="插件版本"),
             "enabled": ConfigField(type=bool, default=True, description="是否启用插件"),
             "config_version": ConfigField(type=str, default="1.0.0", description="配置版本")

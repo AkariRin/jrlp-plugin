@@ -1,0 +1,27 @@
+# jrlp-plugin - 自动生成的配置文件
+# 今天你的群老婆是谁呢
+
+[plugin]
+
+# 插件名称
+name = "jrlp-plugin"
+
+# 插件版本
+version = "1.0.0"
+
+# 是否启用插件
+enabled = true
+
+# 配置版本
+config_version = "1.0.0"
+
+
+[napcat]
+
+# napcat服务器连接地址
+address = "napcat"
+
+# napcat服务器端口
+port = 3000
+
+
