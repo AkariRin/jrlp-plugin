@@ -465,8 +465,8 @@ class JrlpAdminCommand(BaseCommand):
         parts = message_text.split()
 
         if len(parts) < 2:
-            await self.send_text("参数错误")
-            return False, "参数错误", True
+            await self.send_text("参数错误：缺少子命令")
+            return False, "参数错误：缺少子命令", True
 
         # 获取聊天流信息判断群聊/私聊
         chat_stream = self.message.chat_stream
