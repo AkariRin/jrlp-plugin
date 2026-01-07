@@ -27,16 +27,16 @@ class JrlpDatabase:
         self._init_db()
 
     def _init_db(self):
-        """初始化数据库表结构"""
+        # 初始化数据库表结构
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS jrlp (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    qq VARCHAR(20) NOT NULL,
-                    wife VARCHAR(20) NOT NULL,
-                    "group" VARCHAR(20) NOT NULL,
-                    date DATE NOT NULL
+                    id INTEGER PRIMARY KEY,
+                    qq INTEGER NOT NULL,
+                    wife INTEGER NOT NULL,
+                    "group" INTEGER NOT NULL,
+                    date TEXT NOT NULL
                 )
             ''')
             # 添加索引优化查询
@@ -61,10 +61,10 @@ class JrlpDatabase:
             cursor = conn.cursor()
             cursor.execute(
                 'SELECT wife FROM jrlp WHERE qq = ? AND "group" = ? AND date = ?',
-                (qq, group, date)
+                (int(qq), int(group), date)
             )
             result = cursor.fetchone()
-            return result[0] if result else None
+            return str(result[0]) if result else None
 
     def save_wife(self, qq: str, wife: str, group: str, date: str):
         """保存抽取结果
@@ -79,7 +79,7 @@ class JrlpDatabase:
             cursor = conn.cursor()
             cursor.execute(
                 'INSERT INTO jrlp (qq, wife, "group", date) VALUES (?, ?, ?, ?)',
-                (qq, wife, group, date)
+                (int(qq), int(wife), int(group), date)
             )
             conn.commit()
 
@@ -100,7 +100,7 @@ class JrlpDatabase:
             # 查询总数
             cursor.execute(
                 'SELECT COUNT(*) FROM jrlp WHERE "group" = ? AND date = ?',
-                (group, date)
+                (int(group), date)
             )
             total = cursor.fetchone()[0]
 
@@ -108,9 +108,9 @@ class JrlpDatabase:
             offset = (page - 1) * page_size
             cursor.execute(
                 'SELECT qq, wife FROM jrlp WHERE "group" = ? AND date = ? LIMIT ? OFFSET ?',
-                (group, date, page_size, offset)
+                (int(group), date, page_size, offset)
             )
-            records = cursor.fetchall()
+            records = [(str(qq), str(wife)) for qq, wife in cursor.fetchall()]
             return records, total
 
     def upsert_wife(self, qq: str, wife: str, group: str, date: str) -> bool:
@@ -130,7 +130,7 @@ class JrlpDatabase:
             # 检查是否存在记录
             cursor.execute(
                 'SELECT id FROM jrlp WHERE qq = ? AND "group" = ? AND date = ?',
-                (qq, group, date)
+                (int(qq), int(group), date)
             )
             existing = cursor.fetchone()
 
@@ -138,7 +138,7 @@ class JrlpDatabase:
                 # 更新已有记录
                 cursor.execute(
                     'UPDATE jrlp SET wife = ? WHERE qq = ? AND "group" = ? AND date = ?',
-                    (wife, qq, group, date)
+                    (int(wife), int(qq), int(group), date)
                 )
                 conn.commit()
                 return True
@@ -146,7 +146,7 @@ class JrlpDatabase:
                 # 插入新记录
                 cursor.execute(
                     'INSERT INTO jrlp (qq, wife, "group", date) VALUES (?, ?, ?, ?)',
-                    (qq, wife, group, date)
+                    (int(qq), int(wife), int(group), date)
                 )
                 conn.commit()
                 return False
