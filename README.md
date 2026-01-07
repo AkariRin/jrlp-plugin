@@ -12,22 +12,23 @@
 
 ```toml
 [plugin]
-name = "jrlp-plugin"      # 插件名称
-version = "1.0.0"         # 插件版本
-enabled = true            # 是否启用插件
-config_version = "1.0.0"  # 配置版本
+name = "jrlp-plugin"       # 插件名称
+enabled = true             # 是否启用插件
+config_version = "1.0.1"   # 配置版本
 
 [napcat]
-address = "napcat"        # napcat服务器连接地址
-port = 3000               # napcat服务器端口
+address = "napcat"         # napcat服务器连接地址
+port = 3000                # napcat服务器端口
+
+[messages]
+# 已抽取老婆时的提示文本
+# 支持占位符: {wife_name} 老婆昵称, {wife_qq} 老婆QQ号
+already_rolled_text = "你今天已经有群老婆{wife_name}({wife_qq})了，要好好对待她哦~"
+
+# 新抽取老婆时的提示文本
+# 支持占位符: {wife_name} 老婆昵称, {wife_qq} 老婆QQ号
+new_roll_text = "你今天的群老婆是:{wife_name}({wife_qq})"
 ```
-
-### 配置项说明
-
-| 配置项 | 类型 | 默认值 | 说明 |
-|--------|------|--------|------|
-| `napcat.address` | string | `"napcat"` | napcat 服务器地址，可以是 IP 或域名 |
-| `napcat.port` | int | `3000` | napcat 服务器 HTTP API 端口 |
 
 ## 注意事项
 

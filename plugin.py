@@ -258,7 +258,7 @@ class JrlpCommand(BaseCommand):
             message = [
                 {"type": "at", "data": {"qq": user_id}},
                 {"type": "image", "data": {"file": f"https://q1.qlogo.cn/g?b=qq&nk={existing_wife}&s=640", "summary": "[图片]"}},
-                {"type": "text", "data": {"text": self.get_config("messages.already_rolled_text").format(wife_nickname=wife_nickname, wife_qq=existing_wife)}}
+                {"type": "text", "data": {"text": self.get_config("messages.already_rolled_text").format(wife_name=wife_nickname, wife_qq=existing_wife)}}
             ]
 
             success, error = self.send_group_message(napcat_address, napcat_port, group_id, message)
