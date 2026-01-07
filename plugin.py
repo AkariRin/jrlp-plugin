@@ -683,7 +683,7 @@ class JrlpPlugin(BasePlugin):
             ),
             "new_roll_text": ConfigField(
                 type=str,
-                default="你今天的群老婆是:{wife_name}({wife_qq})",
+                default="你今天的群老婆是：{wife_name}({wife_qq})",
                 description="新抽取老婆时的提示文本，支持占位符: {wife_name} 老婆昵称, {wife_qq} 老婆QQ号"
             )
         },
