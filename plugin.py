@@ -305,7 +305,7 @@ class JrlpCommand(BaseCommand):
             group_name = group_info.get("group_name", "未知")
 
         # 输出日志
-        logger.info(f"[今日老婆] {user_nickname}({user_id}) 在 {group_name}({group_id}) 抽到了 {wife_nickname}({wife_id})")
+        logger.info(f"{user_nickname}({user_id}) 在 {group_name}({group_id}) 抽到了 {wife_nickname}({wife_id})")
 
         # 发送消息
         message = [
@@ -331,9 +331,8 @@ class JrlpPlugin(BasePlugin):
     config_file_name = "config.toml"
     config_schema = {
         "plugin": {
-            "name": ConfigField(type=str, default="jrlp-plugin", description="插件名称"),
             "enabled": ConfigField(type=bool, default=True, description="是否启用插件"),
-            "config_version": ConfigField(type=str, default="1.0.1", description="配置版本")
+            "config_version": ConfigField(type=str, default="1.1.0", description="配置版本")
         },
         "napcat": {
             "address": ConfigField(type=str, default="napcat", description="napcat服务器连接地址"),
@@ -350,6 +349,10 @@ class JrlpPlugin(BasePlugin):
                 default="你今天的群老婆是:{wife_name}({wife_qq})",
                 description="新抽取老婆时的提示文本，支持占位符: {wife_name} 老婆昵称, {wife_qq} 老婆QQ号"
             )
+        },
+        "admin": {
+            "enabled": ConfigField(type=bool, default=True, description="是否启用管理功能"),
+            "userlist": ConfigField(type=bool, default=True, description="有管理权限的用户列表"),
         }
     }
 

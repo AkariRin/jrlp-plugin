@@ -14,7 +14,7 @@
 [plugin]
 name = "jrlp-plugin"       # 插件名称
 enabled = true             # 是否启用插件
-config_version = "1.0.1"   # 配置版本
+config_version = "1.1.0"   # 配置版本
 
 [napcat]
 address = "napcat"         # napcat服务器连接地址
