@@ -184,20 +184,6 @@ class JrlpAdminCommand(BaseCommand):
         except Exception as e:
             return False, f"请求错误: {str(e)}"
 
-    def get_member_info(self, address: str, port: int, group_id: str, user_id: str) -> Tuple[bool, Union[dict, str]]:
-        """获取单个群成员信息"""
-        url = f"http://{address}:{port}/get_group_member_info"
-        payload = {"group_id": group_id, "user_id": user_id, "no_cache": True}
-
-        success, result = self._make_request(url, payload)
-        if not success:
-            return False, result
-
-        data = result.get("data")
-        if data is None:
-            return False, "获取群成员信息失败：返回数据为空"
-        return True, data
-
     def get_group_info(self, address: str, port: int, group_id: str) -> Tuple[bool, Union[dict, str]]:
         """获取群信息"""
         url = f"http://{address}:{port}/get_group_info"
@@ -210,6 +196,20 @@ class JrlpAdminCommand(BaseCommand):
         data = result.get("data")
         if data is None:
             return False, "获取群信息失败：返回数据为空"
+        return True, data
+
+    def get_stranger_info(self, address: str, port: int, user_id: str) -> Tuple[bool, Union[dict, str]]:
+        """获取陌生人信息"""
+        url = f"http://{address}:{port}/get_stranger_info"
+        payload = {"user_id": user_id}
+
+        success, result = self._make_request(url, payload)
+        if not success:
+            return False, result
+
+        data = result.get("data")
+        if data is None:
+            return False, "获取用户信息失败：返回数据为空"
         return True, data
 
     async def _handle_query(self, group_id: str, target_qq: str, user_id: str) -> str:
@@ -229,16 +229,16 @@ class JrlpAdminCommand(BaseCommand):
             return f"该成员({target_qq})今日尚未抽取老婆"
 
         # 获取群成员昵称
-        success, member_info = self.get_member_info(napcat_address, napcat_port, group_id, target_qq)
+        success, member_info = self.get_stranger_info(napcat_address, napcat_port, target_qq)
         member_name = "未知"
         if success:
-            member_name = member_info.get("card") or member_info.get("nickname", "未知")
+            member_name = member_info.get("nickname", "未知")
 
         # 获取老婆昵称
-        success, wife_info = self.get_member_info(napcat_address, napcat_port, group_id, wife_qq)
+        success, wife_info = self.get_stranger_info(napcat_address, napcat_port, wife_qq)
         wife_name = "未知"
         if success:
-            wife_name = wife_info.get("card") or wife_info.get("nickname", "未知")
+            wife_name = wife_info.get("nickname", "未知")
 
         return f"{member_name}({target_qq})的老婆是{wife_name}({wife_qq})"
 
@@ -274,16 +274,16 @@ class JrlpAdminCommand(BaseCommand):
 
         for qq, wife_qq in records:
             # 获取成员昵称
-            success, member_info = self.get_member_info(napcat_address, napcat_port, group_id, qq)
+            success, member_info = self.get_stranger_info(napcat_address, napcat_port, qq)
             member_name = "未知"
             if success:
-                member_name = member_info.get("card") or member_info.get("nickname", "未知")
+                member_name = member_info.get("nickname", "未知")
 
             # 获取老婆昵称
-            success, wife_info = self.get_member_info(napcat_address, napcat_port, group_id, wife_qq)
+            success, wife_info = self.get_stranger_info(napcat_address, napcat_port, wife_qq)
             wife_name = "未知"
             if success:
-                wife_name = wife_info.get("card") or wife_info.get("nickname", "未知")
+                wife_name = wife_info.get("nickname", "未知")
 
             lines.append(f"{member_name}({qq})的老婆是{wife_name}({wife_qq})")
 
@@ -302,10 +302,10 @@ class JrlpAdminCommand(BaseCommand):
         db = JrlpDatabase(db_path)
 
         # 获取管理员昵称
-        success, admin_info = self.get_member_info(napcat_address, napcat_port, group_id, user_id)
+        success, admin_info = self.get_stranger_info(napcat_address, napcat_port, user_id)
         admin_name = "未知"
         if success:
-            admin_name = admin_info.get("card") or admin_info.get("nickname", "未知")
+            admin_name = admin_info.get("nickname", "未知")
 
         # 获取群信息
         success, group_info = self.get_group_info(napcat_address, napcat_port, group_id)
@@ -314,16 +314,16 @@ class JrlpAdminCommand(BaseCommand):
             group_name = group_info.get("group_name", "未知")
 
         # 获取成员昵称
-        success, member_info = self.get_member_info(napcat_address, napcat_port, group_id, target_qq)
+        success, member_info = self.get_stranger_info(napcat_address, napcat_port, target_qq)
         member_name = "未知"
         if success:
-            member_name = member_info.get("card") or member_info.get("nickname", "未知")
+            member_name = member_info.get("nickname", "未知")
 
         # 获取老婆昵称
-        success, wife_info = self.get_member_info(napcat_address, napcat_port, group_id, wife_qq)
+        success, wife_info = self.get_stranger_info(napcat_address, napcat_port, wife_qq)
         wife_name = "未知"
         if success:
-            wife_name = wife_info.get("card") or wife_info.get("nickname", "未知")
+            wife_name = wife_info.get("nickname", "未知")
 
         # 更新或插入
         is_update = db.upsert_wife(target_qq, wife_qq, group_id, today)
@@ -478,31 +478,6 @@ class JrlpCommand(BaseCommand):
             return False, "获取群成员列表失败：返回数据为空"
         return True, data
 
-    def get_member_info(self, address: str, port: int, group_id: str, user_id: str) -> Tuple[bool, Union[dict, str]]:
-        """获取单个群成员信息
-
-        Args:
-            address: napcat服务器地址
-            port: napcat服务器端口
-            group_id: 群号
-            user_id: 用户QQ号
-
-        Returns:
-            (True, member_info) 成功时返回成员信息字典
-            (False, error_msg) 失败时返回错误信息
-        """
-        url = f"http://{address}:{port}/get_group_member_info"
-        payload = {"group_id": group_id, "user_id": user_id, "no_cache": True}
-
-        success, result = self._make_request(url, payload)
-        if not success:
-            return False, result
-
-        data = result.get("data")
-        if data is None:
-            return False, "获取群成员信息失败：返回数据为空"
-        return True, data
-
     def get_group_info(self, address: str, port: int, group_id: str) -> Tuple[bool, Union[dict, str]]:
         """获取群信息
 
@@ -525,6 +500,30 @@ class JrlpCommand(BaseCommand):
         data = result.get("data")
         if data is None:
             return False, "获取群信息失败：返回数据为空"
+        return True, data
+
+    def get_stranger_info(self, address: str, port: int, user_id: str) -> Tuple[bool, Union[dict, str]]:
+        """获取陌生人信息
+
+        Args:
+            address: napcat服务器地址
+            port: napcat服务器端口
+            user_id: 用户QQ号
+
+        Returns:
+            (True, stranger_info) 成功时返回用户信息字典
+            (False, error_msg) 失败时返回错误信息
+        """
+        url = f"http://{address}:{port}/get_stranger_info"
+        payload = {"user_id": user_id}
+
+        success, result = self._make_request(url, payload)
+        if not success:
+            return False, result
+
+        data = result.get("data")
+        if data is None:
+            return False, "获取用户信息失败：返回数据为空"
         return True, data
 
     def send_group_message(self, address: str, port: int, group_id: str, message: list) -> Tuple[bool, Optional[str]]:
@@ -579,12 +578,12 @@ class JrlpCommand(BaseCommand):
 
         if existing_wife:
             # 已抽取过，获取老婆信息并返回
-            success, wife_info = self.get_member_info(napcat_address, napcat_port, group_id, existing_wife)
+            success, wife_info = self.get_stranger_info(napcat_address, napcat_port, existing_wife)
             if not success:
                 logger.error(f"获取已抽取老婆信息失败: {wife_info}")
                 return False, f"获取信息失败: {wife_info}", True
 
-            wife_nickname = wife_info.get("card") or wife_info.get("nickname", "未知")
+            wife_nickname = wife_info.get("nickname", "未知")
 
             message = [
                 {"type": "at", "data": {"qq": user_id}},
@@ -615,7 +614,13 @@ class JrlpCommand(BaseCommand):
         # 随机选择老婆
         wife_data = random.choice(candidates)
         wife_id = str(wife_data.get("user_id"))
-        wife_nickname = wife_data.get("card") or wife_data.get("nickname", "未知")
+
+        # 使用get_stranger_info获取老婆昵称
+        success, wife_info = self.get_stranger_info(napcat_address, napcat_port, wife_id)
+        if success:
+            wife_nickname = wife_info.get("nickname", "未知")
+        else:
+            wife_nickname = wife_data.get("card") or wife_data.get("nickname", "未知")
 
         # 保存到数据库
         db.save_wife(user_id, wife_id, group_id, today)
