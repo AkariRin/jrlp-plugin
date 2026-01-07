@@ -14,5 +14,6 @@
   "homepage_url": "https://github.com/AkariRin/jrlp-plugin",
   "repository_url": "https://github.com/AkariRin/jrlp-plugin",
   "keywords": ["今日老婆", "群老婆", "抽老婆"],
-  "categories": ["Entertainment & Interaction"]
+  "categories": ["Entertainment & Interaction"],
+  "id": "AkariRin.jrlp"
 }
