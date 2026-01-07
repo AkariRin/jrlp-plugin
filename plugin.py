@@ -2,6 +2,7 @@ import sqlite3
 import random
 import datetime
 import json
+import toml
 from pathlib import Path
 from typing import Optional, Type, Tuple, List, Union
 from urllib.request import urlopen, Request
@@ -21,6 +22,32 @@ logger = get_logger("jrlp-plugin")
 
 # 分页大小
 QUERYALL_PAGE_SIZE = 10
+
+
+def _load_command_pattern() -> str:
+    """在类定义时加载命令正则表达式配置
+
+    Returns:
+        str: 命令正则表达式，如果配置文件不存在或读取失败则返回默认值
+    """
+    try:
+        # 获取当前插件目录
+        plugin_dir = Path(__file__).parent
+        config_path = plugin_dir / "config.toml"
+
+        # 如果配置文件存在，尝试读取
+        if config_path.exists():
+            config = toml.load(config_path)
+            # 尝试从配置中获取正则表达式
+            if "command" in config and "regex" in config["command"]:
+                pattern = config["command"]["regex"]
+                logger.debug(f"从配置文件加载命令正则: {pattern}")
+                return pattern
+    except Exception as e:
+        logger.warning(f"加载命令正则配置失败，使用默认值: {e}")
+
+    # 返回默认值
+    return r'^(今日老婆|抽老婆|jrlp)$'
 
 # Napcat API调用类
 class NapcatAPI:
@@ -505,16 +532,7 @@ class JrlpAdminCommand(BaseCommand):
 class JrlpCommand(BaseCommand):
     command_name = "jrlp"
     command_description = "今日老婆"
-    command_pattern = None  # 将在初始化时从配置读取
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # 从配置读取正则表达式，如果未配置则使用默认值
-        custom_pattern = self.get_config("command.regex", None)
-        if custom_pattern:
-            self.command_pattern = custom_pattern
-        else:
-            self.command_pattern = r'^(今日老婆|抽老婆|jrlp)$'
+    command_pattern = _load_command_pattern()  # 在类定义时动态加载配置
 
     async def execute(self) -> Tuple[bool, Optional[str], bool]:
         # 获取配置
@@ -640,7 +658,7 @@ class JrlpPlugin(BasePlugin):
     config_schema = {
         "plugin": {
             "enabled": ConfigField(type=bool, default=True, description="是否启用插件"),
-            "config_version": ConfigField(type=str, default="1.1.3", description="配置版本")
+            "config_version": ConfigField(type=str, default="1.1.4", description="配置版本")
         },
         "napcat": {
             "address": ConfigField(type=str, default="napcat", description="napcat服务器连接地址"),

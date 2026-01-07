@@ -1,0 +1,35 @@
+# JRLP插件配置示例
+# 复制此文件为 config.toml 并修改配置
+
+[plugin]
+enabled = true
+config_version = "1.1.5"
+
+[napcat]
+address = "napcat"
+port = 3000
+
+[command]
+# 命令触发的正则表达式
+# 默认支持: 今日老婆、抽老婆、jrlp
+# 修改后需要重载插件才能生效: /pm plugin reload jrlp-plugin
+regex = '^(今日老婆|抽老婆|jrlp)$'
+
+# 示例：添加更多触发词
+# regex = '^(今日老婆|抽老婆|jrlp|今日cp|waifu)$'
+
+# 示例：只支持英文命令
+# regex = '^(jrlp|waifu)$'
+
+# 示例：支持斜杠命令
+# regex = '^(/jrlp|今日老婆)$'
+
+[messages]
+already_rolled_text = "你今天已经抽过老婆了！你的群老婆是"
+no_members_text = "群里人数不足，无法抽取老婆"
+error_text = "获取群成员列表失败"
+
+[admin]
+# 管理员QQ号列表，只有这些用户可以使用管理命令
+admins = []
+
