@@ -19,6 +19,144 @@ from src.plugin_system import (
 
 logger = get_logger("jrlp-plugin")
 
+# 分页大小
+QUERYALL_PAGE_SIZE = 10
+
+# Napcat API调用类
+class NapcatAPI:
+    @staticmethod
+    def _make_request(url: str, payload: dict) -> Tuple[bool, Union[dict, str]]:
+        """发送HTTP POST请求到napcat
+
+        Args:
+            url: 请求URL
+            payload: 请求数据
+
+        Returns:
+            (True, response_data) 成功时
+            (False, error_message) 失败时
+        """
+        try:
+            data = json.dumps(payload, ensure_ascii=False).encode('utf-8')
+            request = Request(
+                url,
+                data=data,
+                headers={'Content-Type': 'application/json'},
+                method='POST'
+            )
+            with urlopen(request, timeout=10) as response:
+                result = json.loads(response.read().decode('utf-8'))
+                return True, result
+        except HTTPError as e:
+            return False, f"HTTP错误: {e.code}"
+        except URLError as e:
+            return False, f"网络错误: {e.reason}"
+        except json.JSONDecodeError as e:
+            return False, f"JSON解析错误: {e}"
+        except Exception as e:
+            return False, f"请求错误: {str(e)}"
+
+    @staticmethod
+    def get_group_member_list(address: str, port: int, group_id: str) -> Tuple[bool, Union[list, str]]:
+        """获取群成员列表
+
+        Args:
+            address: napcat服务器地址
+            port: napcat服务器端口
+            group_id: 群号
+
+        Returns:
+            (True, member_list) 成功时返回成员列表
+            (False, error_msg) 失败时返回错误信息
+        """
+        url = f"http://{address}:{port}/get_group_member_list"
+        payload = {"group_id": group_id, "no_cache": False}
+
+        success, result = NapcatAPI._make_request(url, payload)
+        if not success:
+            return False, result
+
+        data = result.get("data")
+        if data is None:
+            return False, "获取群成员列表失败：返回数据为空"
+        return True, data
+
+    @staticmethod
+    def get_group_info(address: str, port: int, group_id: str) -> Tuple[bool, Union[dict, str]]:
+        """获取群信息
+
+        Args:
+            address: napcat服务器地址
+            port: napcat服务器端口
+            group_id: 群号
+
+        Returns:
+            (True, group_info) 成功时返回群信息字典
+            (False, error_msg) 失败时返回错误信息
+        """
+        url = f"http://{address}:{port}/get_group_info"
+        payload = {"group_id": group_id, "no_cache": False}
+
+        success, result = NapcatAPI._make_request(url, payload)
+        if not success:
+            return False, result
+
+        data = result.get("data")
+        if data is None:
+            return False, "获取群信息失败：返回数据为空"
+        return True, data
+
+    @staticmethod
+    def get_stranger_info(address: str, port: int, user_id: str) -> Tuple[bool, Union[dict, str]]:
+        """获取陌生人信息
+
+        Args:
+            address: napcat服务器地址
+            port: napcat服务器端口
+            user_id: 用户QQ号
+
+        Returns:
+            (True, stranger_info) 成功时返回用户信息字典
+            (False, error_msg) 失败时返回错误信息
+        """
+        url = f"http://{address}:{port}/get_stranger_info"
+        payload = {"user_id": user_id}
+
+        success, result = NapcatAPI._make_request(url, payload)
+        if not success:
+            return False, result
+
+        data = result.get("data")
+        if data is None:
+            return False, "获取用户信息失败：返回数据为空"
+        return True, data
+
+    @staticmethod
+    def send_group_message(address: str, port: int, group_id: str, message: list) -> Tuple[bool, Optional[str]]:
+        """发送群消息
+
+        Args:
+            address: napcat服务器地址
+            port: napcat服务器端口
+            group_id: 群号
+            message: 消息段列表
+
+        Returns:
+            (True, None) 成功时
+            (False, error_msg) 失败时
+        """
+        url = f"http://{address}:{port}/send_group_msg"
+        payload = {
+            "group_id": group_id,
+            "message": message,
+            "storage_message": False
+        }
+
+        success, result = NapcatAPI._make_request(url, payload)
+        if not success:
+            return False, result
+        return True, None
+
 
 # 今日老婆数据库管理类
 class JrlpDatabase:
@@ -152,65 +290,12 @@ class JrlpDatabase:
                 return False
 
 
-# 分页大小
-QUERYALL_PAGE_SIZE = 10
-
 class JrlpAdminCommand(BaseCommand):
     """管理员指令 - 查询和管理今日老婆"""
     command_name = "jrlp-admin"
     command_description = "今日老婆管理指令"
     command_pattern = r'^/jrlp\s+.+$'
 
-    @staticmethod
-    def _make_request(url: str, payload: dict) -> Tuple[bool, Union[dict, str]]:
-        """发送HTTP POST请求到napcat"""
-        try:
-            data = json.dumps(payload, ensure_ascii=False).encode('utf-8')
-            request = Request(
-                url,
-                data=data,
-                headers={'Content-Type': 'application/json'},
-                method='POST'
-            )
-            with urlopen(request, timeout=10) as response:
-                result = json.loads(response.read().decode('utf-8'))
-                return True, result
-        except HTTPError as e:
-            return False, f"HTTP错误: {e.code}"
-        except URLError as e:
-            return False, f"网络错误: {e.reason}"
-        except json.JSONDecodeError as e:
-            return False, f"JSON解析错误: {e}"
-        except Exception as e:
-            return False, f"请求错误: {str(e)}"
-
-    def get_group_info(self, address: str, port: int, group_id: str) -> Tuple[bool, Union[dict, str]]:
-        """获取群信息"""
-        url = f"http://{address}:{port}/get_group_info"
-        payload = {"group_id": group_id, "no_cache": False}
-
-        success, result = self._make_request(url, payload)
-        if not success:
-            return False, result
-
-        data = result.get("data")
-        if data is None:
-            return False, "获取群信息失败：返回数据为空"
-        return True, data
-
-    def get_stranger_info(self, address: str, port: int, user_id: str) -> Tuple[bool, Union[dict, str]]:
-        """获取陌生人信息"""
-        url = f"http://{address}:{port}/get_stranger_info"
-        payload = {"user_id": user_id}
-
-        success, result = self._make_request(url, payload)
-        if not success:
-            return False, result
-
-        data = result.get("data")
-        if data is None:
-            return False, "获取用户信息失败：返回数据为空"
-        return True, data
 
     async def _handle_query(self, group_id: str, target_qq: str, user_id: str) -> str:
         """处理 query 子命令"""
@@ -229,13 +314,13 @@ class JrlpAdminCommand(BaseCommand):
             return f"该成员({target_qq})今日尚未抽取老婆"
 
         # 获取群成员昵称
-        success, member_info = self.get_stranger_info(napcat_address, napcat_port, target_qq)
+        success, member_info = NapcatAPI.get_stranger_info(napcat_address, napcat_port, target_qq)
         member_name = "未知"
         if success:
             member_name = member_info.get("nickname", "未知")
 
         # 获取老婆昵称
-        success, wife_info = self.get_stranger_info(napcat_address, napcat_port, wife_qq)
+        success, wife_info = NapcatAPI.get_stranger_info(napcat_address, napcat_port, wife_qq)
         wife_name = "未知"
         if success:
             wife_name = wife_info.get("nickname", "未知")
@@ -264,7 +349,7 @@ class JrlpAdminCommand(BaseCommand):
             return f"页码超出范围，共{total_pages}页"
 
         # 获取群信息
-        success, group_info = self.get_group_info(napcat_address, napcat_port, group_id)
+        success, group_info = NapcatAPI.get_group_info(napcat_address, napcat_port, group_id)
         group_name = "未知"
         if success:
             group_name = group_info.get("group_name", "未知")
@@ -274,20 +359,20 @@ class JrlpAdminCommand(BaseCommand):
 
         for qq, wife_qq in records:
             # 获取成员昵称
-            success, member_info = self.get_stranger_info(napcat_address, napcat_port, qq)
+            success, member_info = NapcatAPI.get_stranger_info(napcat_address, napcat_port, qq)
             member_name = "未知"
             if success:
                 member_name = member_info.get("nickname", "未知")
 
             # 获取老婆昵称
-            success, wife_info = self.get_stranger_info(napcat_address, napcat_port, wife_qq)
+            success, wife_info = NapcatAPI.get_stranger_info(napcat_address, napcat_port, wife_qq)
             wife_name = "未知"
             if success:
                 wife_name = wife_info.get("nickname", "未知")
 
             lines.append(f"{member_name}({qq})的老婆是{wife_name}({wife_qq})")
 
-        lines.append(f"第{page}页/共{total_pages}页，共{total}项")
+        lines.append(f"\n第{page}页/共{total_pages}页，共{total}项")
         return "\n".join(lines)
 
     async def _handle_override(self, group_id: str, target_qq: str, wife_qq: str, user_id: str) -> str:
@@ -302,25 +387,25 @@ class JrlpAdminCommand(BaseCommand):
         db = JrlpDatabase(db_path)
 
         # 获取管理员昵称
-        success, admin_info = self.get_stranger_info(napcat_address, napcat_port, user_id)
+        success, admin_info = NapcatAPI.get_stranger_info(napcat_address, napcat_port, user_id)
         admin_name = "未知"
         if success:
             admin_name = admin_info.get("nickname", "未知")
 
         # 获取群信息
-        success, group_info = self.get_group_info(napcat_address, napcat_port, group_id)
+        success, group_info = NapcatAPI.get_group_info(napcat_address, napcat_port, group_id)
         group_name = "未知"
         if success:
             group_name = group_info.get("group_name", "未知")
 
         # 获取成员昵称
-        success, member_info = self.get_stranger_info(napcat_address, napcat_port, target_qq)
+        success, member_info = NapcatAPI.get_stranger_info(napcat_address, napcat_port, target_qq)
         member_name = "未知"
         if success:
             member_name = member_info.get("nickname", "未知")
 
         # 获取老婆昵称
-        success, wife_info = self.get_stranger_info(napcat_address, napcat_port, wife_qq)
+        success, wife_info = NapcatAPI.get_stranger_info(napcat_address, napcat_port, wife_qq)
         wife_name = "未知"
         if success:
             wife_name = wife_info.get("nickname", "未知")
@@ -420,136 +505,16 @@ class JrlpAdminCommand(BaseCommand):
 class JrlpCommand(BaseCommand):
     command_name = "jrlp"
     command_description = "今日老婆"
-    command_pattern = r'^(今日老婆|抽老婆|jrlp)$'
+    command_pattern = None  # 将在初始化时从配置读取
 
-    @staticmethod
-    def _make_request(url: str, payload: dict) -> Tuple[bool, Union[dict, str]]:
-        """发送HTTP POST请求到napcat
-
-        Args:
-            url: 请求URL
-            payload: 请求数据
-
-        Returns:
-            (True, response_data) 成功时
-            (False, error_message) 失败时
-        """
-        try:
-            data = json.dumps(payload, ensure_ascii=False).encode('utf-8')
-            request = Request(
-                url,
-                data=data,
-                headers={'Content-Type': 'application/json'},
-                method='POST'
-            )
-            with urlopen(request, timeout=10) as response:
-                result = json.loads(response.read().decode('utf-8'))
-                return True, result
-        except HTTPError as e:
-            return False, f"HTTP错误: {e.code}"
-        except URLError as e:
-            return False, f"网络错误: {e.reason}"
-        except json.JSONDecodeError as e:
-            return False, f"JSON解析错误: {e}"
-        except Exception as e:
-            return False, f"请求错误: {str(e)}"
-
-    def get_group_member_list(self, address: str, port: int, group_id: str) -> Tuple[bool, Union[list, str]]:
-        """获取群成员列表
-
-        Args:
-            address: napcat服务器地址
-            port: napcat服务器端口
-            group_id: 群号
-
-        Returns:
-            (True, member_list) 成功时返回成员列表
-            (False, error_msg) 失败时返回错误信息
-        """
-        url = f"http://{address}:{port}/get_group_member_list"
-        payload = {"group_id": group_id, "no_cache": False}
-
-        success, result = self._make_request(url, payload)
-        if not success:
-            return False, result
-
-        data = result.get("data")
-        if data is None:
-            return False, "获取群成员列表失败：返回数据为空"
-        return True, data
-
-    def get_group_info(self, address: str, port: int, group_id: str) -> Tuple[bool, Union[dict, str]]:
-        """获取群信息
-
-        Args:
-            address: napcat服务器地址
-            port: napcat服务器端口
-            group_id: 群号
-
-        Returns:
-            (True, group_info) 成功时返回群信息字典
-            (False, error_msg) 失败时返回错误信息
-        """
-        url = f"http://{address}:{port}/get_group_info"
-        payload = {"group_id": group_id, "no_cache": False}
-
-        success, result = self._make_request(url, payload)
-        if not success:
-            return False, result
-
-        data = result.get("data")
-        if data is None:
-            return False, "获取群信息失败：返回数据为空"
-        return True, data
-
-    def get_stranger_info(self, address: str, port: int, user_id: str) -> Tuple[bool, Union[dict, str]]:
-        """获取陌生人信息
-
-        Args:
-            address: napcat服务器地址
-            port: napcat服务器端口
-            user_id: 用户QQ号
-
-        Returns:
-            (True, stranger_info) 成功时返回用户信息字典
-            (False, error_msg) 失败时返回错误信息
-        """
-        url = f"http://{address}:{port}/get_stranger_info"
-        payload = {"user_id": user_id}
-
-        success, result = self._make_request(url, payload)
-        if not success:
-            return False, result
-
-        data = result.get("data")
-        if data is None:
-            return False, "获取用户信息失败：返回数据为空"
-        return True, data
-
-    def send_group_message(self, address: str, port: int, group_id: str, message: list) -> Tuple[bool, Optional[str]]:
-        """发送群消息
-
-        Args:
-            address: napcat服务器地址
-            port: napcat服务器端口
-            group_id: 群号
-            message: 消息段列表
-
-        Returns:
-            (True, None) 成功时
-            (False, error_msg) 失败时
-        """
-        url = f"http://{address}:{port}/send_group_msg"
-        payload = {
-            "group_id": group_id,
-            "message": message,
-            "storage_message": False  # 按要求设为false
-        }
-
-        success, result = self._make_request(url, payload)
-        if not success:
-            return False, result
-        return True, None
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # 从配置读取正则表达式，如果未配置则使用默认值
+        custom_pattern = self.get_config("command.regex", None)
+        if custom_pattern:
+            self.command_pattern = custom_pattern
+        else:
+            self.command_pattern = r'^(今日老婆|抽老婆|jrlp)$'
 
     async def execute(self) -> Tuple[bool, Optional[str], bool]:
         # 获取配置
@@ -578,7 +543,7 @@ class JrlpCommand(BaseCommand):
 
         if existing_wife:
             # 已抽取过，获取老婆信息并返回
-            success, wife_info = self.get_stranger_info(napcat_address, napcat_port, existing_wife)
+            success, wife_info = NapcatAPI.get_stranger_info(napcat_address, napcat_port, existing_wife)
             if not success:
                 logger.error(f"获取已抽取老婆信息失败: {wife_info}")
                 return False, f"获取信息失败: {wife_info}", True
@@ -591,7 +556,7 @@ class JrlpCommand(BaseCommand):
                 {"type": "text", "data": {"text": self.get_config("messages.already_rolled_text").format(wife_name=wife_nickname, wife_qq=existing_wife)}}
             ]
 
-            success, error = self.send_group_message(napcat_address, napcat_port, group_id, message)
+            success, error = NapcatAPI.send_group_message(napcat_address, napcat_port, group_id, message)
             if not success:
                 logger.error(f"发送消息失败: {error}")
                 return False, f"发送消息失败: {error}", True
@@ -599,7 +564,7 @@ class JrlpCommand(BaseCommand):
             return True, "已返回今日老婆", True
 
         # 获取群成员列表
-        success, member_list = self.get_group_member_list(napcat_address, napcat_port, group_id)
+        success, member_list = NapcatAPI.get_group_member_list(napcat_address, napcat_port, group_id)
         if not success:
             logger.error(f"获取群成员列表失败: {member_list}")
             return False, f"获取群成员列表失败: {member_list}", True
@@ -616,7 +581,7 @@ class JrlpCommand(BaseCommand):
         wife_id = str(wife_data.get("user_id"))
 
         # 使用get_stranger_info获取老婆昵称
-        success, wife_info = self.get_stranger_info(napcat_address, napcat_port, wife_id)
+        success, wife_info = NapcatAPI.get_stranger_info(napcat_address, napcat_port, wife_id)
         if success:
             wife_nickname = wife_info.get("nickname", "未知")
         else:
@@ -636,7 +601,7 @@ class JrlpCommand(BaseCommand):
                 break
 
         # 获取群信息
-        success, group_info = self.get_group_info(napcat_address, napcat_port, group_id)
+        success, group_info = NapcatAPI.get_group_info(napcat_address, napcat_port, group_id)
         if success:
             group_name = group_info.get("group_name", "未知")
 
@@ -649,7 +614,7 @@ class JrlpCommand(BaseCommand):
             {"type": "image", "data": {"file": f"https://q1.qlogo.cn/g?b=qq&nk={wife_id}&s=640", "summary": "[图片]"}},
             {"type": "text", "data": {"text": self.get_config("messages.new_roll_text").format(wife_name=wife_nickname, wife_qq=wife_id)}}
         ]
-        success, error = self.send_group_message(napcat_address, napcat_port, group_id, message)
+        success, error = NapcatAPI.send_group_message(napcat_address, napcat_port, group_id, message)
         if not success:
             logger.error(f"发送消息失败: {error}")
             return False, f"发送消息失败: {error}", True
@@ -669,16 +634,24 @@ class JrlpPlugin(BasePlugin):
         "plugin": "插件基础配置",
         "napcat": "napcat服务器配置",
         "messages": "消息文本配置",
+        "command": "命令配置",
         "admin": "管理功能配置"
     }
     config_schema = {
         "plugin": {
             "enabled": ConfigField(type=bool, default=True, description="是否启用插件"),
-            "config_version": ConfigField(type=str, default="1.1.0", description="配置版本")
+            "config_version": ConfigField(type=str, default="1.1.3", description="配置版本")
         },
         "napcat": {
             "address": ConfigField(type=str, default="napcat", description="napcat服务器连接地址"),
             "port": ConfigField(type=int, default=3000, description="napcat服务器端口")
+        },
+        "command": {
+            "regex": ConfigField(
+                type=str,
+                default=r'^(今日老婆|抽老婆|jrlp)$',
+                description="今日老婆命令的正则表达式，用于匹配触发命令的消息"
+            )
         },
         "messages": {
             "already_rolled_text": ConfigField(
