@@ -1,6 +1,3 @@
-"""
-今日老婆插件
-"""
 import sqlite3
 import random
 import datetime
@@ -22,9 +19,9 @@ from src.plugin_system import (
 
 logger = get_logger("jrlp-plugin")
 
-class JrlpDatabase:
-    """今日老婆数据库管理类"""
 
+# 今日老婆数据库管理类
+class JrlpDatabase:
     def __init__(self, db_path: Path):
         self.db_path = db_path
         self._init_db()
@@ -94,7 +91,8 @@ class JrlpCommand(BaseCommand):
     command_description = "今日老婆 - 在群里随机抽一位群友当一天群老婆"
     command_pattern = r'^(今日老婆|抽老婆|jrlp)$'
 
-    def _make_request(self, url: str, payload: dict) -> Tuple[bool, Union[dict, str]]:
+    @staticmethod
+    def _make_request(url: str, payload: dict) -> Tuple[bool, Union[dict, str]]:
         """发送HTTP POST请求到napcat
 
         Args:
@@ -235,7 +233,7 @@ class JrlpCommand(BaseCommand):
 
         # 检查是否为群聊
         if stream_type != "group":
-            return False, "该命令仅支持群聊环境", False
+            return False, None, False
 
         group_id = str(chat_stream.group_info.group_id)
         today = datetime.datetime.now().strftime("%Y-%m-%d")
@@ -256,11 +254,11 @@ class JrlpCommand(BaseCommand):
                 return False, f"获取信息失败: {wife_info}", True
 
             wife_nickname = wife_info.get("card") or wife_info.get("nickname", "未知")
+
             message = [
                 {"type": "at", "data": {"qq": user_id}},
-                {"type": "text", "data": {"text": "\n"}},
                 {"type": "image", "data": {"file": f"https://q1.qlogo.cn/g?b=qq&nk={existing_wife}&s=640", "summary": "[图片]"}},
-                {"type": "text", "data": {"text": f"你今天已经有群老婆{wife_nickname}({existing_wife})了，要好好对待她哦~"}}
+                {"type": "text", "data": {"text": self.get_config("messages.already_rolled_text").format(wife_nickname=wife_nickname, wife_qq=existing_wife)}}
             ]
 
             success, error = self.send_group_message(napcat_address, napcat_port, group_id, message)
@@ -313,7 +311,7 @@ class JrlpCommand(BaseCommand):
         message = [
             {"type": "at", "data": {"qq": user_id}},
             {"type": "image", "data": {"file": f"https://q1.qlogo.cn/g?b=qq&nk={wife_id}&s=640", "summary": "[图片]"}},
-            {"type": "text", "data": {"text": f"你今天的群老婆是:{wife_nickname}({wife_id})"}}
+            {"type": "text", "data": {"text": self.get_config("messages.new_roll_text").format(wife_name=wife_nickname, wife_qq=wife_id)}}
         ]
         success, error = self.send_group_message(napcat_address, napcat_port, group_id, message)
         if not success:
@@ -334,13 +332,24 @@ class JrlpPlugin(BasePlugin):
     config_schema = {
         "plugin": {
             "name": ConfigField(type=str, default="jrlp-plugin", description="插件名称"),
-            "version": ConfigField(type=str, default="1.0.1", description="插件版本"),
             "enabled": ConfigField(type=bool, default=True, description="是否启用插件"),
-            "config_version": ConfigField(type=str, default="1.0.0", description="配置版本")
+            "config_version": ConfigField(type=str, default="1.0.1", description="配置版本")
         },
         "napcat": {
             "address": ConfigField(type=str, default="napcat", description="napcat服务器连接地址"),
             "port": ConfigField(type=int, default=3000, description="napcat服务器端口")
+        },
+        "messages": {
+            "already_rolled_text": ConfigField(
+                type=str,
+                default="你今天已经有群老婆{wife_name}({wife_qq})了，要好好对待她哦~",
+                description="已抽取老婆时的提示文本，支持占位符: {wife_name} 老婆昵称, {wife_qq} 老婆QQ号"
+            ),
+            "new_roll_text": ConfigField(
+                type=str,
+                default="你今天的群老婆是:{wife_name}({wife_qq})",
+                description="新抽取老婆时的提示文本，支持占位符: {wife_name} 老婆昵称, {wife_qq} 老婆QQ号"
+            )
         }
     }
 
