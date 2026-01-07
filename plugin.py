@@ -157,8 +157,8 @@ QUERYALL_PAGE_SIZE = 10
 
 class JrlpAdminCommand(BaseCommand):
     """管理员指令 - 查询和管理今日老婆"""
-    command_name = "jrlp_admin"
-    command_description = "今日老婆管理指令 - 查询/覆盖群成员的老婆"
+    command_name = "jrlp-admin"
+    command_description = "今日老婆管理指令"
     command_pattern = r'^/jrlp\s+.+$'
 
     @staticmethod
@@ -301,12 +301,17 @@ class JrlpAdminCommand(BaseCommand):
         db_path = current_dir / "jrlp.db"
         db = JrlpDatabase(db_path)
 
-        # 更新或插入
-        is_update = db.upsert_wife(target_qq, wife_qq, group_id, today)
-        if is_update:
-            logger.info(f"管理员{user_id}更新了群({group_id})成员({target_qq})的老婆为({wife_qq})")
-        else:
-            logger.info(f"管理员{user_id}为群({group_id})成员({target_qq})新建老婆记录为({wife_qq})")
+        # 获取管理员昵称
+        success, admin_info = self.get_member_info(napcat_address, napcat_port, group_id, user_id)
+        admin_name = "未知"
+        if success:
+            admin_name = admin_info.get("card") or admin_info.get("nickname", "未知")
+
+        # 获取群信息
+        success, group_info = self.get_group_info(napcat_address, napcat_port, group_id)
+        group_name = "未知"
+        if success:
+            group_name = group_info.get("group_name", "未知")
 
         # 获取成员昵称
         success, member_info = self.get_member_info(napcat_address, napcat_port, group_id, target_qq)
@@ -319,6 +324,13 @@ class JrlpAdminCommand(BaseCommand):
         wife_name = "未知"
         if success:
             wife_name = wife_info.get("card") or wife_info.get("nickname", "未知")
+
+        # 更新或插入
+        is_update = db.upsert_wife(target_qq, wife_qq, group_id, today)
+        if is_update:
+            logger.info(f"{admin_name}({user_id}) 更新了 {group_name}({group_id}) 成员 {member_name}({target_qq}) 的老婆为 {wife_name}({wife_qq})")
+        else:
+            logger.info(f"{admin_name}({user_id}) 为 {group_name}({group_id}) 成员 {member_name}({target_qq}) 新建老婆记录为 {wife_name}({wife_qq})")
 
         return f"已将{member_name}({target_qq})的老婆改为{wife_name}({wife_qq})"
 
@@ -407,7 +419,7 @@ class JrlpAdminCommand(BaseCommand):
 
 class JrlpCommand(BaseCommand):
     command_name = "jrlp"
-    command_description = "今日老婆 - 在群里随机抽一位群友当一天群老婆"
+    command_description = "今日老婆"
     command_pattern = r'^(今日老婆|抽老婆|jrlp)$'
 
     @staticmethod
