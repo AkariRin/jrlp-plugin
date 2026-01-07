@@ -355,7 +355,7 @@ class JrlpAdminCommand(BaseCommand):
             group_name = group_info.get("group_name", "未知")
 
         # 构建返回消息
-        lines = [f"群{group_name}({group_id})的今日老婆有："]
+        lines = [f"群{group_name}({group_id}) 的今日老婆有："]
 
         for qq, wife_qq in records:
             # 获取成员昵称
@@ -370,7 +370,7 @@ class JrlpAdminCommand(BaseCommand):
             if success:
                 wife_name = wife_info.get("nickname", "未知")
 
-            lines.append(f"{member_name}({qq})的老婆是{wife_name}({wife_qq})")
+            lines.append(f"{member_name}({qq}) 的老婆是 {wife_name}({wife_qq})")
 
         lines.append(f"\n第{page}页/共{total_pages}页，共{total}项")
         return "\n".join(lines)
