@@ -159,6 +159,32 @@ class NapcatAPI:
         return True, data
 
     @staticmethod
+    def get_group_member_info(address: str, port: int, group_id: str, user_id: str) -> Tuple[bool, Union[dict, str]]:
+        """获取群成员信息
+
+        Args:
+            address: napcat服务器地址
+            port: napcat服务器端口
+            group_id: 群号
+            user_id: 用户QQ号
+
+        Returns:
+            (True, member_info) 成功时返回群成员信息字典
+            (False, error_msg) 失败时返回错误信息
+        """
+        url = f"http://{address}:{port}/get_group_member_info"
+        payload = {"group_id": group_id, "user_id": user_id, "no_cache": False}
+
+        success, result = NapcatAPI._make_request(url, payload)
+        if not success:
+            return False, result
+
+        data = result.get("data")
+        if data is None:
+            return False, "获取群成员信息失败：返回数据为空"
+        return True, data
+
+    @staticmethod
     def send_group_message(address: str, port: int, group_id: str, message: list) -> Tuple[bool, Optional[str]]:
         """发送群消息
 
@@ -323,6 +349,37 @@ class JrlpAdminCommand(BaseCommand):
     command_description = "今日老婆管理指令"
     command_pattern = r'^/jrlp\s+.+$'
 
+    async def _check_permission(self, user_id: str, group_id: Optional[str] = None) -> Tuple[bool, str]:
+        """检查用户权限
+
+        Args:
+            user_id: 用户QQ号
+            group_id: 群号（可选，用于检查群管理权限）
+
+        Returns:
+            (是否有权限, 权限类型) 权限类型: "bot_admin", "group_admin", "none"
+        """
+        # 检查是否是机器人管理员
+        admin_list = self.get_config("admin.userlist", [])
+        if user_id in admin_list:
+            return True, "bot_admin"
+
+        # 如果启用了群管理员权限检查且提供了群号
+        allow_group_admin = self.get_config("admin.allow-group-admin", False)
+        if allow_group_admin and group_id:
+            napcat_address = self.get_config("napcat.address")
+            napcat_port = self.get_config("napcat.port")
+
+            # 获取群成员信息
+            success, member_info = NapcatAPI.get_group_member_info(
+                napcat_address, napcat_port, group_id, user_id
+            )
+            if success:
+                role = member_info.get("role", "member")
+                if role in ["owner", "admin"]:
+                    return True, "group_admin"
+
+        return False, "none"
 
     async def _handle_query(self, group_id: str, target_qq: str, user_id: str) -> str:
         """处理 query 子命令"""
@@ -447,18 +504,13 @@ class JrlpAdminCommand(BaseCommand):
         return f"已将{member_name}({target_qq})的老婆改为{wife_name}({wife_qq})"
 
     async def execute(self) -> Tuple[bool, Optional[str], bool]:
-        # 权限校验
+        # 获取用户信息
         user_info = self.message.message_info.user_info if self.message.message_info else None
         if not user_info:
             await self.send_text("无法获取用户信息")
             return False, "无法获取用户信息", True
 
         user_id = str(user_info.user_id)
-        admin_list = self.get_config("admin.userlist", [])
-
-        if user_id not in admin_list:
-            await self.send_text("权限不足")
-            return False, "权限不足", True
 
         # 解析消息内容
         message_text = self.message.processed_plain_text.strip()
@@ -485,6 +537,38 @@ class JrlpAdminCommand(BaseCommand):
                 return False, "参数错误", True
             group_id = parts[2]
             args = parts[3:]  # 第四个参数开始是功能参数
+
+        # 权限校验
+        # 先检查机器人管理员权限（不需要群号）
+        has_permission, permission_type = await self._check_permission(user_id, None)
+
+        # 如果不是机器人管理员，再检查是否是目标群的群管理员
+        if not has_permission or permission_type == "none":
+            has_permission, permission_type = await self._check_permission(user_id, group_id)
+
+        # 如果是群管理员，需要验证操作的群是否是他管理的群
+        if permission_type == "group_admin":
+            # 验证用户在目标群中的权限
+            napcat_address = self.get_config("napcat.address")
+            napcat_port = self.get_config("napcat.port")
+
+            success, member_info = NapcatAPI.get_group_member_info(
+                napcat_address, napcat_port, group_id, user_id
+            )
+
+            if not success:
+                await self.send_text(f"权限验证失败：无法获取您在群 {group_id} 中的信息")
+                return False, "权限验证失败", True
+
+            role = member_info.get("role", "member")
+            if role not in ["owner", "admin"]:
+                await self.send_text(f"权限不足：您不是群 {group_id} 的管理员")
+                return False, "权限不足", True
+
+        if not has_permission:
+            await self.send_text("权限不足")
+            return False, "权限不足", True
+
 
         # 根据命令分发处理
         try:
@@ -658,7 +742,7 @@ class JrlpPlugin(BasePlugin):
     config_schema = {
         "plugin": {
             "enabled": ConfigField(type=bool, default=True, description="是否启用插件"),
-            "config_version": ConfigField(type=str, default="1.1.4", description="配置版本")
+            "config_version": ConfigField(type=str, default="1.1.5", description="配置版本")
         },
         "napcat": {
             "address": ConfigField(type=str, default="napcat", description="napcat服务器连接地址"),
@@ -686,6 +770,7 @@ class JrlpPlugin(BasePlugin):
         "admin": {
             "enabled": ConfigField(type=bool, default=True, description="是否启用管理功能"),
             "userlist": ConfigField(type=list, default=[], description="有管理权限的用户列表"),
+            "allow-group-admin": ConfigField(type=bool, default=False, description="是否允许群管理员和群主管理对应群的老婆记录")
         }
     }
 
